@@ -21,19 +21,19 @@ if uploaded_file:
         st.success("File uploaded successfully!")
 
         velocity = df[col_names[0]].dropna().to_numpy()
-        time = np.arange(len(velocity))  # assume constant sample rate if no time column
+        time = np.arange(len(velocity))  # Assume constant sample rate
 
-        # Smoothing to reduce noise
+        # Smooth the velocity signal to reduce noise
         smoothed_velocity = uniform_filter1d(velocity, size=5)
 
-        # Acceleration as derivative of velocity
+        # Acceleration is the gradient of velocity
         acceleration = np.gradient(smoothed_velocity)
 
-        # Detect zero crossings for oscillation cycles
+        # Detect zero crossings for oscillation detection
         zero_crossings = np.where(np.diff(np.sign(smoothed_velocity)))[0]
         num_oscillations = len(zero_crossings) // 2
 
-        # Calculate ranges and rates of oscillation
+        # Measure range and duration of each oscillation
         ranges = []
         durations = []
         for i in range(0, len(zero_crossings) - 1, 2):
@@ -46,13 +46,13 @@ if uploaded_file:
 
         rates = [1 / d if d != 0 else 0 for d in durations]
 
-        # Detect changes in rate or range
+        # Detect significant changes in range or rate
         range_changes = np.where(np.abs(np.diff(ranges)) > np.std(ranges))[0]
         rate_changes = np.where(np.abs(np.diff(rates)) > np.std(rates))[0]
 
+        # ---------------------- PLOTS ----------------------
         st.subheader("📈 Plots")
         fig, axs = plt.subplots(2, 1, figsize=(10, 6))
-
         axs[0].plot(time, velocity, label='Velocity')
         axs[0].set_title('Velocity')
         axs[0].grid(True)
@@ -63,14 +63,15 @@ if uploaded_file:
 
         st.pyplot(fig)
 
+        # ---------------------- SUMMARY ----------------------
         st.subheader("📊 Analysis Summary")
-        st.write(f"Total Oscillations Detected: {num_oscillations}")
-        st.write(f"Average Range of Motion: {np.mean(ranges):.2f}")
-        st.write(f"Average Rate of Oscillation: {np.mean(rates):.4f} cycles/sample")
+        st.write(f"Total Oscillations Detected: **{num_oscillations}**")
+        st.write(f"Average Range of Motion: **{np.mean(ranges):.2f}**")
+        st.write(f"Average Rate of Oscillation: **{np.mean(rates):.4f} cycles/sample**")
         st.write(f"Notable Range Changes at Cycles: {range_changes.tolist()}")
         st.write(f"Notable Rate Changes at Cycles: {rate_changes.tolist()}")
 
-        # DataFrames for export
+        # ---------------------- DATA FOR EXPORT ----------------------
         df_velocity = pd.DataFrame({"Velocity": velocity})
         df_acceleration = pd.DataFrame({"Acceleration": acceleration})
         df_summary = pd.DataFrame({
@@ -79,19 +80,17 @@ if uploaded_file:
             "Oscillation Rate": rates
         })
 
-        # Export to Excel with download button
-        st.subheader("📤 Export")
-        if st.button("Export analysis to Excel"):
-            excel_buffer = io.BytesIO()
-            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
-                df_velocity.to_excel(writer, sheet_name='Velocity', index=False)
-                df_acceleration.to_excel(writer, sheet_name='Acceleration', index=False)
-                df_summary.to_excel(writer, sheet_name='Summary', index=False)
-            st.success("Excel file ready!")
+        # ---------------------- DOWNLOAD EXCEL ----------------------
+        st.subheader("📤 Export Analysis")
+        excel_buffer = io.BytesIO()
+        with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+            df_velocity.to_excel(writer, sheet_name='Velocity', index=False)
+            df_acceleration.to_excel(writer, sheet_name='Acceleration', index=False)
+            df_summary.to_excel(writer, sheet_name='Summary', index=False)
 
-            st.download_button(
-                label="📥 Download Excel File",
-                data=excel_buffer.getvalue(),
-                file_name="oscillation_analysis.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+        st.download_button(
+            label="📥 Download Excel File",
+            data=excel_buffer.getvalue(),
+            file_name="oscillation_analysis.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
