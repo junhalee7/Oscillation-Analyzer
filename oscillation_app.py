@@ -64,25 +64,17 @@ if uploaded_file:
         st.write(f"**Notable Range Changes:** {range_changes.tolist()}")
         st.write(f"**Notable Rate Changes:** {rate_changes.tolist()}")
 
-        # EXPORT
-        st.subheader("📤 Export Analysis to Excel")
-        df_velocity = pd.DataFrame({"Velocity": velocity})
-        df_acceleration = pd.DataFrame({"Acceleration": acceleration})
-        df_summary = pd.DataFrame({
-            "Cycle": list(range(len(ranges))),
-            "Range of Motion": ranges,
-            "Oscillation Rate": rates
-        })
-
+                # Prepare buffer immediately when data is available
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             df_velocity.to_excel(writer, sheet_name='Velocity', index=False)
             df_acceleration.to_excel(writer, sheet_name='Acceleration', index=False)
             df_summary.to_excel(writer, sheet_name='Summary', index=False)
+        buffer.seek(0)  # Reset buffer position to beginning
 
         st.download_button(
             label="📥 Download Excel File",
-            data=buffer.getvalue(),
+            data=buffer,
             file_name="oscillation_analysis.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
